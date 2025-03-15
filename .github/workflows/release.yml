@@ -25,7 +25,7 @@ jobs:
             mv target/release/renamer target/release/renamer-${{ matrix.os }}
           fi
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: renamer-${{ matrix.os }}
           path: target/release/renamer-${{ matrix.os }}*
