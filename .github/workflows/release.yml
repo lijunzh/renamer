@@ -16,7 +16,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Build release binary
-        run: cargo build --relesae
+        run: cargo build --release
       - name: Rename binary for consistency
         run: |
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
