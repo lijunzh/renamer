@@ -22,18 +22,23 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: |
           mv target/release/renamer target/release/renamer-${{ matrix.os }}
+
       # Rename binary for Windows using PowerShell
       - name: Rename binary for Windows
         if: matrix.os == 'windows-latest'
         shell: powershell
         run: |
           Rename-Item -Path "target\release\renamer.exe" -NewName "renamer-${{ matrix.os }}.exe"
+
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: renamer-${{ matrix.os }}
           path: |
             ${{ github.workspace }}/target/release/renamer-${{ matrix.os }}*
+
+
+        
   release:
     name: Create Release
     needs: build
@@ -43,6 +48,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -53,6 +59,7 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+
       - name: Upload Release Asset - Linux
         uses: actions/upload-release-asset@v1
         env:
@@ -62,6 +69,7 @@ jobs:
           asset_path: artifacts/renamer-ubuntu-latest
           asset_name: renamer-linux
           asset_content_type: application/octet-stream
+
       - name: Upload Release Asset - macOS
         uses: actions/upload-release-asset@v1
         env:
@@ -71,6 +79,7 @@ jobs:
           asset_path: artifacts/renamer-macos-latest
           asset_name: renamer-macos
           asset_content_type: application/octet-stream
+
       - name: Upload Release Asset - Windows
         uses: actions/upload-release-asset@v1
         env:
