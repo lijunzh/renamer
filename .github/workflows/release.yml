@@ -66,7 +66,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/renamer-ubuntu-latest
+          asset_path: artifacts/renamer-ubuntu-latest/renamer-ubuntu-latest
           asset_name: renamer-linux
           asset_content_type: application/octet-stream
 
@@ -76,7 +76,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/renamer-macos-latest
+          asset_path: artifacts/renamer-macos-latest/renamer-macos-latest
           asset_name: renamer-macos
           asset_content_type: application/octet-stream
 
@@ -86,6 +86,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/renamer-windows-latest.exe
+          asset_path: artifacts/renamer-windows-latest/renamer-windows-latest.exe
           asset_name: renamer-windows.exe
           asset_content_type: application/octet-stream
