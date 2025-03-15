@@ -6,8 +6,8 @@ using a user-provided regular expression, then generates new file names using a
 customizable pattern. The tool preserves the original file extension and
 supports a dry-run mode so you can preview changes before they are applied.
 
-**Note**: the code based is mostly generated using GPT 03-mini-high model
-including this readme file.
+**Note**: the code based is mostly generated using GPT o3-mini-high model
+including this README file.
 
 ## Features
 
