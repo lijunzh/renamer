@@ -9,8 +9,12 @@
 //! ```
 use std::fmt;
 
+/// Custom error type for the Renamer tool.
+/// 
+/// This enum defines possible errors that can occur during file renaming operations.
 #[derive(Debug)]
 pub enum RenamerError {
+    /// The provided regex pattern did not match the file name.
     InvalidPattern,
     IOError(std::io::Error),
     // ... possible additional errors ...

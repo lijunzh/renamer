@@ -3,10 +3,22 @@ use crate::error::RenamerError;
 
 // Transformation logic for renaming filenames.
 
-/// Transforms a filename using a regex and replacement pattern.
-///
+/// Transforms a filename using a regex and a replacement pattern.
+/// 
+/// # Parameters
+/// 
+/// - `original`: The original filename.
+/// - `new_pattern`: The pattern to generate the new filename. Placeholders like `{title}`, `{season:02}`, `{episode:02}` are supported.
+/// - `_re`: A regular expression with named capture groups (e.g., "season" and "episode") used to extract filename parts.
+/// - `season`: Default season value if not captured.
+/// - `title`: The show title to use if a `{title}` placeholder is present.
+/// 
+/// # Returns
+/// 
+/// Returns a `Result` with the transformed filename (with the original file extension appended) or a `RenamerError::InvalidPattern` if the regex does not match.
+/// 
 /// # Examples
-///
+/// 
 /// ```
 /// # use regex::Regex;
 /// # use renamer::transform_filename;
@@ -35,7 +47,18 @@ pub fn transform_filename(original: &str, new_pattern: &str, _re: &Regex, season
     Ok(result)
 }
 
-/// Checks if a filename contains the "warning" substring.
+/// Checks if a filename contains a warning substring.
+///
+/// In the current implementation, a filename that contains "warning"
+/// will trigger a warning.
+///
+/// # Parameters
+///
+/// - `filename`: The filename to check.
+///
+/// # Returns
+///
+/// Returns `true` if the filename contains "warning", otherwise `false`.
 ///
 /// # Examples
 ///

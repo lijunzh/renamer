@@ -5,20 +5,34 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 
 /// A planned renaming operation.
+///
+/// Stores the original and new file paths, and a flag indicating if a warning
+/// should be triggered due to season or episode being "0".
 #[derive(Debug)]
 pub struct PlannedRename {
     pub old_path: PathBuf,
     pub new_path: PathBuf,
-    pub warn: bool, // true if season or episode equals "0"
+    /// True if season or episode equals "0".
+    pub warn: bool,
 }
 
-/// Transforms an original file name into a new file name by applying the regex
-/// and replacing placeholders. The default new pattern is "{title} - S{season:02}E{episode:02}".
-/// If the regex does not capture the "season" group, the provided `default_season` is used.
-/// If the new pattern includes a `{title}` placeholder, it is replaced with `show_title`;
-/// if `show_title` is empty, it is replaced with an empty string.
-/// The original file’s extension is preserved.
-/// Returns None if the regex does not match the original file name.
+/// Transforms an original file name into a new one according to a template.
+///
+/// This function applies the provided regex to extract named capture groups from
+/// the original file name and then replaces the placeholders in the new pattern with
+/// their corresponding values. The original file's extension is preserved.
+/// 
+/// # Parameters
+/// 
+/// - `original`: The original file name.
+/// - `new_pattern`: The template for the new file name (supports placeholders such as `{title}`, `{season:02}`, and `{episode:02}`).
+/// - `re`: The regex used to capture metadata from the original name.
+/// - `default_season`: The default season value if not provided by the regex.
+/// - `show_title`: The title to use if the `{title}` placeholder is present.
+/// 
+/// # Returns
+/// 
+/// Returns `Some(new_file_name)` if the regex matches; otherwise, returns `None`.
 pub fn transform_filename(
     original: &str,
     new_pattern: &str,
@@ -87,7 +101,18 @@ pub fn transform_filename(
     Some(new_file_name)
 }
 
-/// Checks whether the file’s captured season or episode equals "0".
+/// Checks whether the file's captured season or episode equals "0".
+///
+/// A warning is triggered if the season or episode value in the file name is "0".
+/// 
+/// # Parameters
+/// 
+/// - `original`: The original file name.
+/// - `re`: The regex to capture season and episode information from the file name.
+/// 
+/// # Returns
+/// 
+/// Returns `true` if the season or episode is "0", otherwise `false`.
 pub fn check_warning(original: &str, re: &Regex) -> bool {
     if let Some(caps) = re.captures(original) {
         let season_warn = caps

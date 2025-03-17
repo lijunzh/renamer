@@ -219,7 +219,7 @@ The tests cover:
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request on GitHub.
+Contributions are welcome! Please review our guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) before submitting issues or pull requests.
 
 ### Development
 
