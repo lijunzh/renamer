@@ -10,6 +10,7 @@ use walkdir::WalkDir;
 use std::io::{self, Write};
 use clap::Parser;
 use anyhow::{anyhow, Result};
+use rayon::prelude::*;
 
 use crate::cli::Cli;
 use crate::renamer::{PlannedRename, transform_filename, check_warning, should_process_file};
@@ -29,34 +30,30 @@ fn main() -> Result<()> {
     // Determine the show title to use. If none is provided, use an empty string.
     let show_title = cli.title.as_deref().unwrap_or("");
 
-    let mut planned: Vec<PlannedRename> = Vec::new();
-
-    // Recursively iterate over files in the directory up to the specified depth.
-    let walker = WalkDir::new(&cli.directory).max_depth(cli.depth).into_iter();
-
-    for entry in walker.filter_map(|e| e.ok()) {
-        let path = entry.path();
-        // Only process files (ignore subdirectories).
-        if path.is_file() {
-            if !should_process_file(path, &cli.file_types) {
-                continue;
-            }
-            if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
-                if let Some(new_file_name) =
-                    transform_filename(file_name, &cli.new_pattern, &re, &cli.default_season, show_title)
-                {
-                    let warn = check_warning(file_name, &re);
-                    let new_path = path.with_file_name(&new_file_name);
-                    planned.push(PlannedRename {
-                        old_path: path.to_path_buf(),
-                        new_path: new_path.clone(),
-                        warn,
-                    });
-                    info!("Planned rename from {:?} to {:?}", path, &new_path);
+    // Replace the sequential iteration with parallel processing.
+    let planned: Vec<PlannedRename> = WalkDir::new(&cli.directory)
+        .max_depth(cli.depth)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .par_bridge()  // Converts the iterator into a parallel iterator.
+        .filter_map(|entry| {
+            let path = entry.path();
+            if path.is_file() && should_process_file(path, &cli.file_types) {
+                if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
+                    if let Some(new_file_name) = transform_filename(file_name, &cli.new_pattern, &re, &cli.default_season, show_title) {
+                        let warn = check_warning(file_name, &re);
+                        let new_path = path.with_file_name(&new_file_name);
+                        return Some(PlannedRename {
+                            old_path: path.to_path_buf(),
+                            new_path: new_path.clone(),
+                            warn,
+                        });
+                    }
                 }
             }
-        }
-    }
+            None
+        })
+        .collect();
 
     // If any file would be renamed with season or episode "0", warn the user.
     if planned.iter().any(|p| p.warn) {
