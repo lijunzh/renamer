@@ -43,149 +43,112 @@ cd renamer-cli
 cargo build --release
 ```
 
-## Usage
+## Getting Started
 
-To use Renamer, run the following command:
+Getting started with Renamer is easy. Here's a quick guide to help you rename your files right away:
+
+### Key Concepts
+
+- **Named Capture Groups**: Use `(?P<name>pattern)` in your regex to capture parts of the filename
+- **Placeholders**: Use `{name}` in your new pattern to insert captured values
+- **Formatting**: Use `{name:02}` to format numbers with leading zeros
+- **Default Values**: The `--default-season` option provides a fallback when season info is missing
+
+### Need Help with Regex?
+
+If you're not familiar with regex syntax, here are some example patterns to help you get started:
+
+- **TV Shows**: `[Ss](?P<season>\d+)[Ee](?P<episode>\d+)` - Matches "S01E01", "s1e01", etc.
+- **Movies**: `(?P<title>.+?)\.(?P<year>\d{4})` - Extracts title and year from "Movie.2023.mp4"
+- **Anime**: `\[(?P<title>[^]]+)\]\[(?P<episode>\d+)\]` - Matches "[Title][01]"
+
+You can also use ChatGPT or other LLM tools with prompts like:
+- "Create a regex pattern to match file names in the format 'S1E1_video.mkv'."
+- "Generate a regex to extract the title and episode number from file names like '[Author][title][01][1080P][BDRip][HEVC-10bit][FLAC].mkv'."
+
+### Basic Usage
 
 ```sh
 renamer --current_pattern <pattern> --new_pattern <replacement> [options]
 ```
 
-Run the CLI tool using cargo run with the appropriate options.
-
 ### Options
 
-- `-h`, `--help`: Print help information.
-- `-d`, `--directory`: Directory to process. Default is the current directory.
-- `-c`, `--current_pattern`: (Required) Regex pattern with named groups to match parts of the current file name. Example:
-  For file names like S1E1_video.mkv, use:
+- `-h`, `--help`: Print help information
+- `-d`, `--directory`: Directory to process (default: current directory)
+- `-c`, `--current_pattern`: (Required) Regex pattern with named capture groups
+- `-n`, `--new_pattern`: New filename pattern (default: "{title} - S{season:02}E{episode:02}")
+- `-t`, `--file_types`: Comma-separated list of file extensions (e.g., "mkv,mp4,srt")
+- `--default-season`: Default season value (default: "1")
+- `-T`, `--title`: Optional title to include in the new filename
+- `--dry-run`: Preview changes without renaming files
+- `--depth`: Recursion depth for subdirectories (default: 1)
+- `--config`: Path to a TOML configuration file
 
-```
-S(?P<season>\d+)E(?P<episode>\d+)
-```
+## Examples
 
-- `-n`, `--new_pattern`: New file name pattern. **Default**: "{title} - S{season:02}E{episode:02}" (Placeholders: {season}, {episode}, and optionally {title}).
-- `-t`, `--file_types`: Comma-separated list of file extensions to process (e.g. mkv,ass,srt).
-- `--default-season`: Default season value if the file name does not include one. Default: "1".
-- `-T`, `--title`: (Optional) Show title to include in the new file name if the new pattern contains {title}.
-- `--dry-run`: If set, prints the planned renames without actually renaming any files.
-- `--depth`: Specify the depth of recursion for renaming files. Default is 1 (no recursion).
-
-### Examples
-
-Rename all `.txt` files to `.md`:
+### Simple Text File Renaming
 
 ```sh
-renamer --current_pattern '^(.*)\.txt$' --new_pattern '$1.md'
-```
-
-Perform a dry run to see the changes:
-
-```sh
+# Rename all .txt files to .md
 renamer --current_pattern '^(.*)\.txt$' --new_pattern '$1.md' --dry-run
 ```
 
-### Example 1: Renaming Files with Season & Episode
+### TV Shows Organization
 
-For file names like:
-
-```
-S1E1_video.mkv
-S12E34_video.mkv
-```
-
-Run:
+For files with inconsistent naming like `BreakingBad.S01E01.720p.mkv` or `BB_S1_E3_720p.mkv`:
 
 ```bash
-cargo run -- \
-  -d /path/to/files \
-  --current_pattern "S(?P<season>\d+)E(?P<episode>\d+)" \
+renamer \
+  --current_pattern "[Ss]0*(?P<season>\d+)[Ee]0*(?P<episode>\d+)" \
   --new_pattern "{title} - S{season:02}E{episode:02}" \
-  --file_types mkv,ass
+  --file_types mkv,mp4 \
+  --title "Breaking Bad"
 ```
 
-This will use the default new pattern. If no title is provided, the {title} placeholder is replaced with an empty string.
+### Movies with Year Information
 
-### Example 2: Renaming Files When Season Is Missing
-
-For file names like:
-
-```
-[Author][title][01][1080P][BDRip][HEVC-10bit][FLAC].mkv
-```
-
-Since the season is missing, supply a regex that captures the episode and (optionally) the title:
+For movie files like `Avatar.2009.1080p.BluRay.mkv`:
 
 ```bash
-cargo run -- \
-  -d /path/to/files \
+renamer \
+  --current_pattern "(?P<title>.+?)\.(?P<year>\d{4})" \
+  --new_pattern "{title} ({year})" \
+  --file_types mkv,mp4
+```
+
+### Anime with Missing Season Information
+
+For files like `[Author][title][01][1080P][BDRip][HEVC-10bit][FLAC].mkv`:
+
+```bash
+renamer \
   --current_pattern "\[(?P<title>[^]]+)\]\[(?P<episode>\d+)\]" \
   --new_pattern "{title} - S{season:02}E{episode:02}" \
   --file_types mkv,ass \
   --default-season 1
 ```
 
-This extracts the title "title" and episode "01", then uses the default season (1) to produce a new file name like:
+### Recursive Directory Processing
 
-```
-title - S01E01.mkv
-```
-
-### Example 3: Overriding the Title
-
-If you want to ignore any title captured by the regex and supply your own, run:
+To rename files in subdirectories:
 
 ```bash
-cargo run -- \
-  -d /path/to/files \
+renamer \
   --current_pattern "(?P<episode>\d+)" \
   --new_pattern "{title} - S{season:02}E{episode:02}" \
   --file_types mkv,ass \
-  --default-season 1 \
-  --title "My Show"
-```
-
-Since the regex here only captures the episode, the {title} placeholder in the new pattern is replaced by "My Show", producing:
-
-```
-My Show - S01E01.mkv
-```
-
-### Example 4: Depth Control for Recursive Renaming
-
-To rename files in subdirectories as well, specify the depth of recursion:
-
-```bash
-cargo run -- \
-  -d /path/to/files \
-  --current_pattern "(?P<episode>\d+)" \
-  --new_pattern "{title} - S{season:02}E{episode:02}" \
-  --file_types mkv,ass \
-  --default-season 1 \
   --title "My Show" \
   --depth 2
 ```
 
-This will rename files in the specified directory and all its subdirectories up to 2 levels deep.
+## Configuration File
 
-## Configuration File and Merging Priority
+Renamer supports providing a configuration file in TOML format. CLI options take precedence over configuration file values.
 
-Renamer supports providing a configuration file in TOML format to set common parameters. When you supply a config file using the `--config` option, its values are merged with those provided via the CLI. **CLI options take precedence over configuration file values.** That is, if you provide an option both on the command line and in the configuration file, the CLI value will be used.
+Example `config.toml`:
 
-For example, if you run:
-
-```sh
-renamer --config config.toml --title "My Title"
-```
-
-the title `"My Title"` will override the title specified in `config.toml`.
-
-## Configuration File Example
-
-You can provide a configuration file in TOML format to set common parameters. For example, create a file named `config.toml` with the following content:
-
-````toml
-// filepath: /Users/l0z05rg/repo/renamer/config.toml
+```toml
 directory = "/path/to/files"
 current_pattern = "S(?P<season>\\d+)E(?P<episode>\\d+)"
 new_pattern = "{title} - S{season:02}E{episode:02}"
@@ -194,32 +157,13 @@ dry_run = true
 default_season = "1"
 title = "My Show"
 depth = 2
-````
+```
 
-Then run Renamer by specifying the config file:
+Usage:
 
 ```sh
 renamer --config config.toml
 ```
-
-Values provided in the configuration file will be merged with any CLI arguments you supply.
-
-## Dry-Run Mode
-
-To preview changes without renaming files, include the --dry-run flag:
-
-```bash
-cargo run -- \
-  -d /path/to/files \
-  --current_pattern "(?P<episode>\d+)" \
-  --new_pattern "{title} - S{season:02}E{episode:02}" \
-  --file_types mkv,ass \
-  --default-season 1 \
-  --title "My Show" \
-  --dry-run
-```
-
-This will display the planned renames without modifying any files.
 
 ## Running Tests
 
