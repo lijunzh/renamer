@@ -4,11 +4,11 @@
 mod cli;
 mod renamer;
 
-use clap::Parser;
 use log::{info, warn, error, LevelFilter};
 use simplelog::{Config, SimpleLogger};
 use walkdir::WalkDir;
 use std::io::{self, Write};
+use clap::Parser;
 
 use crate::cli::Cli;
 use crate::renamer::{PlannedRename, transform_filename, check_warning, should_process_file};
@@ -84,151 +84,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use regex::Regex;
-    use std::path::{Path, PathBuf};
-
-    #[test]
-    fn test_transform_with_title_provided() {
-        // When new_pattern includes {title} and a title is provided.
-        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
-        let original = "S1E1_video.mkv";
-        let new_pattern = "{title} - S{season:02}E{episode:02}";
-        let transformed = transform_filename(original, new_pattern, &re, "1", "MyShow").unwrap();
-        assert_eq!(transformed, "MyShow - S01E01.mkv");
-    }
-
-    #[test]
-    fn test_transform_with_title_omitted() {
-        // When new_pattern includes {title} but no title is provided.
-        // The {title} placeholder should be replaced with an empty string.
-        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
-        let original = "S1E1_video.mkv";
-        let new_pattern = "{title} - S{season:02}E{episode:02}";
-        let transformed = transform_filename(original, new_pattern, &re, "1", "").unwrap();
-        // Expect leading " - " to be present because {title} is replaced by empty string.
-        assert_eq!(transformed, " - S01E01.mkv");
-    }
-
-    #[test]
-    fn test_transform_without_title_placeholder() {
-        // When new_pattern does not include a {title} placeholder, even if a title is provided it is ignored.
-        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
-        let original = "S1E1_video.mkv";
-        let new_pattern = "S{season:02}E{episode:02}";
-        let transformed = transform_filename(original, new_pattern, &re, "1", "MyShow").unwrap();
-        assert_eq!(transformed, "S01E01.mkv");
-    }
-
-    #[test]
-    fn test_transform_default_format_double_digit() {
-        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
-        let original = "S12E34_video.mkv";
-        let new_pattern = "{title} - S{season:02}E{episode:02}";
-        let transformed = transform_filename(original, new_pattern, &re, "1", "TestShow").unwrap();
-        assert_eq!(transformed, "TestShow - S12E34.mkv");
-    }
-
-    #[test]
-    fn test_transform_high_episode() {
-        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
-        let original = "S01E100_video.mkv";
-        let new_pattern = "{title} - S{season:02}E{episode:02}";
-        let transformed = transform_filename(original, new_pattern, &re, "1", "TestShow").unwrap();
-        assert_eq!(transformed, "TestShow - S01E100.mkv");
-    }
-
-    #[test]
-    fn test_transform_no_regex_match() {
-        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
-        let original = "random_file.txt";
-        let new_pattern = "{title} - S{season:02}E{episode:02}";
-        let transformed = transform_filename(original, new_pattern, &re, "1", "TestShow");
-        assert!(transformed.is_none());
-    }
-
-    #[test]
-    #[should_panic(expected = "Negative value for season")]
-    fn test_negative_season() {
-        let re = Regex::new(r"S(?P<season>-\d+)E(?P<episode>\d+)").unwrap();
-        let original = "S-1E10_video.mkv";
-        let new_pattern = "{title} - S{season:02}E{episode:02}";
-        transform_filename(original, new_pattern, &re, "1", "TestShow");
-    }
-
-    #[test]
-    fn test_transform_with_default_season() {
-        // When the file name does not include season info.
-        let re = Regex::new(r"\[(?P<episode>\d+)\]").unwrap();
-        let original = "[DBD-Raws][Ao no Exorcist][01][1080P][BDRip][HEVC-10bit][FLAC].mkv";
-        let new_pattern = "{title} - S{season:02}E{episode:02}";
-        let transformed = transform_filename(original, new_pattern, &re, "1", "Ao no Exorcist").unwrap();
-        assert_eq!(transformed, "Ao no Exorcist - S01E01.mkv");
-    }
-
-    #[test]
-    fn test_check_warning_no_warning() {
-        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
-        let file_name = "S01E01_video.mkv";
-        assert_eq!(check_warning(file_name, &re), false);
-    }
-
-    #[test]
-    fn test_check_warning_with_warning() {
-        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
-        let file_name1 = "S0E01_video.mkv";
-        let file_name2 = "S01E0_video.mkv";
-        assert_eq!(check_warning(file_name1, &re), true);
-        assert_eq!(check_warning(file_name2, &re), true);
-    }
-
-    #[test]
-    fn test_should_process_file_allowed() {
-        let allowed_types = vec!["mkv".to_string(), "ass".to_string()];
-        let path = Path::new("S01E01_video.mkv");
-        assert!(should_process_file(path, &allowed_types));
-    }
-
-    #[test]
-    fn test_should_process_file_not_allowed() {
-        let allowed_types = vec!["mkv".to_string(), "ass".to_string()];
-        let path = Path::new("S01E01_video.mp4");
-        assert!(!should_process_file(path, &allowed_types));
-    }
-
-    #[test]
-    fn test_should_process_file_no_extension() {
-        let allowed_types = vec!["mkv".to_string(), "ass".to_string()];
-        let path = Path::new("README");
-        assert!(!should_process_file(path, &allowed_types));
-    }
-
-    #[test]
-    fn test_should_process_subdirectory() {
-        let allowed_types = vec!["mkv".to_string(), "ass".to_string()];
-        let path = Path::new("subdir");
-        assert!(!should_process_file(path, &allowed_types));
-    }
-
-    #[test]
-    fn test_depth_option() {
-        let cli = Cli {
-            directory: PathBuf::from("test_dir"),
-            current_pattern: String::from(r"S(?P<season>\d+)E(?P<episode>\d+)"),
-            new_pattern: String::from("{title} - S{season:02}E{episode:02}"),
-            file_types: vec!["mkv".to_string()],
-            dry_run: true,
-            default_season: String::from("1"),
-            title: Some(String::from("TestShow")),
-            depth: 2,
-        };
-
-        // Simulate the main function with the depth option set to 2.
-        // Ensure that files up to 2 levels deep are processed.
-        // ...test logic...
-    }
 }

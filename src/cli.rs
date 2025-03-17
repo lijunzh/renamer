@@ -41,3 +41,33 @@ pub struct Cli {
     #[arg(long, default_value_t = 1)]
     pub depth: usize,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_cli_parsing() {
+        let args = vec![
+            "renamer",
+            "-d", "/path/to/dir",
+            "-c", r"S(?P<season>\d+)E(?P<episode>\d+)",
+            "-n", "{title} - S{season:02}E{episode:02}",
+            "-t", "mkv,ass",
+            "--dry-run",
+            "--default-season", "1",
+            "-T", "MyShow",
+            "--depth", "3",
+        ];
+        let cli = Cli::parse_from(args);
+        assert_eq!(cli.directory, PathBuf::from("/path/to/dir"));
+        assert_eq!(cli.current_pattern, r"S(?P<season>\d+)E(?P<episode>\d+)");
+        assert_eq!(cli.new_pattern, "{title} - S{season:02}E{episode:02}");
+        assert_eq!(cli.file_types, vec!["mkv".to_string(), "ass".to_string()]);
+        assert!(cli.dry_run);
+        assert_eq!(cli.default_season, "1".to_string());
+        assert_eq!(cli.title, Some("MyShow".to_string()));
+        assert_eq!(cli.depth, 3);
+    }
+}

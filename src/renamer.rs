@@ -246,4 +246,22 @@ mod tests {
         let path = Path::new("subdir");
         assert!(!should_process_file(path, &allowed_types));
     }
+
+    #[test]
+    fn test_check_warning_true() {
+        // season '0' should trigger warning.
+        let pattern = r"S(?P<season>\d+)E(?P<episode>\d+)";
+        let re = Regex::new(pattern).unwrap();
+        let file_name = "MyShow S0E10.mkv"; // season is 0 -> warn true
+        assert!(check_warning(file_name, &re));
+    }
+    
+    #[test]
+    fn test_check_warning_false() {
+        // valid season/episode should not trigger warning.
+        let pattern = r"S(?P<season>\d+)E(?P<episode>\d+)";
+        let re = Regex::new(pattern).unwrap();
+        let file_name = "MyShow S01E10.mkv";
+        assert!(!check_warning(file_name, &re));
+    }
 }
