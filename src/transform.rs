@@ -48,3 +48,44 @@ pub fn check_warning(filename: &str) -> bool {
     // ...existing warning check logic...
     filename.contains("warning")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use regex::Regex;
+    use crate::error::RenamerError;
+
+    #[test]
+    fn test_transform_valid_with_extension() {
+        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
+        let new_pattern = "{title} - S{season:02}E{episode:02}";
+        let result = transform_filename("S3E12_movie.mkv", new_pattern, &re, "3", "Test").unwrap();
+        assert_eq!(result, "Test - S03E12.mkv");
+    }
+
+    #[test]
+    fn test_transform_valid_without_extension() {
+        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
+        let new_pattern = "{title} - S{season:02}E{episode:02}";
+        let result = transform_filename("S2E5", new_pattern, &re, "2", "Demo").unwrap();
+        assert_eq!(result, "Demo - S02E05");
+    }
+
+    #[test]
+    fn test_transform_invalid_regex() {
+        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
+        let new_pattern = "{title} - S{season:02}E{episode:02}";
+        let result = transform_filename("NotAMatch.txt", new_pattern, &re, "1", "Show");
+        assert!(matches!(result, Err(RenamerError::InvalidPattern)));
+    }
+
+    #[test]
+    fn test_check_warning_true() {
+        assert!(check_warning("file_warning.txt"));
+    }
+
+    #[test]
+    fn test_check_warning_false() {
+        assert!(!check_warning("file_ok.txt"));
+    }
+}
