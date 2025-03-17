@@ -48,7 +48,7 @@ cargo build --release
 To use Renamer, run the following command:
 
 ```sh
-renamer <pattern> <replacement> [options]
+renamer --current_pattern <pattern> --new_pattern <replacement> [options]
 ```
 
 Run the CLI tool using cargo run with the appropriate options.
@@ -56,48 +56,33 @@ Run the CLI tool using cargo run with the appropriate options.
 ### Options
 
 - `-h`, `--help`: Print help information.
-- -d, --directory: (Required) Directory to process.
-- -c, --current_pattern: (Required) Regex pattern with named groups to match
-  parts of the current file name. Example:
-- For file names like S1E1_video.mkv, use:
+- `-d`, `--directory`: Directory to process. Default is the current directory.
+- `-c`, `--current_pattern`: (Required) Regex pattern with named groups to match parts of the current file name. Example:
+  For file names like S1E1_video.mkv, use:
 
 ```
 S(?P<season>\d+)E(?P<episode>\d+)
 ```
 
-- For file names like [Author][title][01][1080P][BDRip][HEVC-10bit][FLAC].mkv
-  (without season), use:
-
-```
-$begin:math:display$[^]]+$end:math:display$$begin:math:display$(?P<title>[^]]+)$end:math:display$$begin:math:display$(?P<episode>\\d+)$end:math:display$
-```
-
-- -n, --new_pattern: New file name pattern. **Default**: "{title} -
-  S{season:02}E{episode:02}" (Placeholders: {season}, {episode}, and optionally
-  {title}.)
-
-- -t, --file_types: Comma-separated list of file extensions to process (e.g.
-  mkv,ass,srt).
-- --default-season: Default season value if the file name does not include one.
-  Default: "1".
-- -T, --title: (Optional) Show title to include in the new file name if the new
-  pattern contains {title}.
-- --dry-run: If set, prints the planned renames without actually renaming any
-  files.
-- --depth: Specify the depth of recursion for renaming files. Default is 1 (no recursion).
+- `-n`, `--new_pattern`: New file name pattern. **Default**: "{title} - S{season:02}E{episode:02}" (Placeholders: {season}, {episode}, and optionally {title}).
+- `-t`, `--file_types`: Comma-separated list of file extensions to process (e.g. mkv,ass,srt).
+- `--default-season`: Default season value if the file name does not include one. Default: "1".
+- `-T`, `--title`: (Optional) Show title to include in the new file name if the new pattern contains {title}.
+- `--dry-run`: If set, prints the planned renames without actually renaming any files.
+- `--depth`: Specify the depth of recursion for renaming files. Default is 1 (no recursion).
 
 ### Examples
 
 Rename all `.txt` files to `.md`:
 
 ```sh
-renamer '^(.*)\.txt$' '$1.md'
+renamer --current_pattern '^(.*)\.txt$' --new_pattern '$1.md'
 ```
 
 Perform a dry run to see the changes:
 
 ```sh
-renamer '^(.*)\.txt$' '$1.md' --dry-run
+renamer --current_pattern '^(.*)\.txt$' --new_pattern '$1.md' --dry-run
 ```
 
 ### Example 1: Renaming Files with Season & Episode
@@ -115,11 +100,11 @@ Run:
 cargo run -- \
   -d /path/to/files \
   --current_pattern "S(?P<season>\d+)E(?P<episode>\d+)" \
+  --new_pattern "{title} - S{season:02}E{episode:02}" \
   --file_types mkv,ass
 ```
 
-This will use the default new pattern. If no title is provided, the {title}
-placeholder is replaced with an empty string.
+This will use the default new pattern. If no title is provided, the {title} placeholder is replaced with an empty string.
 
 ### Example 2: Renaming Files When Season Is Missing
 
@@ -129,19 +114,18 @@ For file names like:
 [Author][title][01][1080P][BDRip][HEVC-10bit][FLAC].mkv
 ```
 
-Since the season is missing, supply a regex that captures the episode and
-(optionally) the title:
+Since the season is missing, supply a regex that captures the episode and (optionally) the title:
 
 ```bash
 cargo run -- \
   -d /path/to/files \
-  --current_pattern "$begin:math:display$[^]]+$end:math:display$$begin:math:display$(?P<title>[^]]+)$end:math:display$$begin:math:display$(?P<episode>\\d+)$end:math:display$" \
+  --current_pattern "\[(?P<title>[^]]+)\]\[(?P<episode>\d+)\]" \
+  --new_pattern "{title} - S{season:02}E{episode:02}" \
   --file_types mkv,ass \
   --default-season 1
 ```
 
-This extracts the title "title" and episode "01", then uses the default season
-(1) to produce a new file name like:
+This extracts the title "title" and episode "01", then uses the default season (1) to produce a new file name like:
 
 ```
 title - S01E01.mkv
@@ -154,14 +138,14 @@ If you want to ignore any title captured by the regex and supply your own, run:
 ```bash
 cargo run -- \
   -d /path/to/files \
-  --current_pattern "$begin:math:display$(?P<episode>\\d+)$end:math:display$" \
+  --current_pattern "(?P<episode>\d+)" \
+  --new_pattern "{title} - S{season:02}E{episode:02}" \
   --file_types mkv,ass \
   --default-season 1 \
   --title "My Show"
 ```
 
-Since the regex here only captures the episode, the {title} placeholder in the
-new pattern is replaced by "My Show", producing:
+Since the regex here only captures the episode, the {title} placeholder in the new pattern is replaced by "My Show", producing:
 
 ```
 My Show - S01E01.mkv
@@ -174,7 +158,8 @@ To rename files in subdirectories as well, specify the depth of recursion:
 ```bash
 cargo run -- \
   -d /path/to/files \
-  --current_pattern "$begin:math:display$(?P<episode>\\d+)$end:math:display$" \
+  --current_pattern "(?P<episode>\d+)" \
+  --new_pattern "{title} - S{season:02}E{episode:02}" \
   --file_types mkv,ass \
   --default-season 1 \
   --title "My Show" \
@@ -226,7 +211,8 @@ To preview changes without renaming files, include the --dry-run flag:
 ```bash
 cargo run -- \
   -d /path/to/files \
-  --current_pattern "$begin:math:display$(?P<episode>\\d+)$end:math:display$" \
+  --current_pattern "(?P<episode>\d+)" \
+  --new_pattern "{title} - S{season:02}E{episode:02}" \
   --file_types mkv,ass \
   --default-season 1 \
   --title "My Show" \

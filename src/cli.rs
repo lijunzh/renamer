@@ -40,7 +40,7 @@ pub struct Cli {
     pub config: Option<PathBuf>,
 
     /// Directory to process (short: -d)
-    #[arg(short, long)]
+    #[arg(short, long, default_value = ".")]
     pub directory: PathBuf,
 
     /// Current file regex pattern with named groups 
@@ -100,5 +100,21 @@ mod tests {
         assert_eq!(cli.default_season, "1".to_string());
         assert_eq!(cli.title, Some("MyShow".to_string()));
         assert_eq!(cli.depth, 3);
+    }
+
+    #[test]
+    fn test_cli_default_directory() {
+        let args = vec![
+            "renamer",
+            "-c", r"S(?P<season>\d+)E(?P<episode>\d+)",
+            "-n", "{title} - S{season:02}E{episode:02}",
+            "-t", "mkv,ass",
+            "--dry-run",
+            "--default-season", "1",
+            "-T", "MyShow",
+            "--depth", "3",
+        ];
+        let cli = Cli::parse_from(args);
+        assert_eq!(cli.directory, PathBuf::from("."));
     }
 }
