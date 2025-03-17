@@ -1,5 +1,4 @@
-use renamer::cli::Cli;
-use renamer::renamer::{transform_filename, check_warning, should_process_file};
+use renamer::{Cli, transform_filename, check_warning, should_process_file};
 use regex::Regex;
 use tempfile::tempdir;
 
@@ -79,4 +78,3 @@ fn test_depth_option() {
     assert_eq!(count, 2);
 }
 
-// ...other tests...
