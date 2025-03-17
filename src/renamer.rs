@@ -1,87 +1,122 @@
-//! Main module for the renamer tool.
-//! This module handles the CLI parsing, logging setup, and the main logic for processing files.
+//! Renamer module for the renamer tool.
+//! This module contains the core logic for transforming file names based on regex patterns and user-defined templates.
 
-mod cli;
-mod renamer;
+use regex::Regex;
+use std::path::{Path, PathBuf};
 
-use clap::Parser;
-use log::{info, warn, error, LevelFilter};
-use simplelog::{Config, SimpleLogger};
-use walkdir::WalkDir;
-use std::io::{self, Write};
+/// A planned renaming operation.
+#[derive(Debug)]
+pub struct PlannedRename {
+    pub old_path: PathBuf,
+    pub new_path: PathBuf,
+    pub warn: bool, // true if season or episode equals "0"
+}
 
-use crate::cli::Cli;
-use crate::renamer::{PlannedRename, transform_filename, check_warning, should_process_file};
+/// Transforms an original file name into a new file name by applying the regex
+/// and replacing placeholders. The default new pattern is "{title} - S{season:02}E{episode:02}".
+/// If the regex does not capture the "season" group, the provided `default_season` is used.
+/// If the new pattern includes a `{title}` placeholder, it is replaced with `show_title`;
+/// if `show_title` is empty, it is replaced with an empty string.
+/// The original file’s extension is preserved.
+/// Returns None if the regex does not match the original file name.
+pub fn transform_filename(
+    original: &str,
+    new_pattern: &str,
+    re: &Regex,
+    default_season: &str,
+    show_title: &str,
+) -> Option<String> {
+    let path = Path::new(original);
+    let original_ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_lowercase();
 
-/// Main function to run the renamer tool.
-/// Sets up logging, parses CLI arguments, and processes files for renaming.
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    SimpleLogger::init(LevelFilter::Info, Config::default())?;
-    let cli = Cli::parse();
+    // Capture groups from the original file name using the regex.
+    let caps = re.captures(original)?;
 
-    info!("Starting renamer tool with parameters: {:?}", cli);
-
-    // Compile the provided regex pattern.
-    let re = regex::Regex::new(&cli.current_pattern)
-        .map_err(|e| format!("Invalid regex pattern provided for current file names: {}", e))?;
-
-    // Determine the show title to use. If none is provided, use an empty string.
-    let show_title = cli.title.as_deref().unwrap_or("");
-
-    let mut planned: Vec<PlannedRename> = Vec::new();
-
-    // Recursively iterate over files in the directory.
-    for entry in WalkDir::new(&cli.directory).into_iter().filter_map(|e| e.ok()) {
-        let path = entry.path();
-        // Only process files (ignore subdirectories).
-        if path.is_file() {
-            if !should_process_file(path, &cli.file_types) {
-                continue;
+    // Replace placeholders of the form {name} or {name:width} in new_pattern.
+    let placeholder_re = Regex::new(r"\{(\w+)(?::(\d+))?\}").unwrap();
+    let result = placeholder_re.replace_all(new_pattern, |ph_caps: &regex::Captures| {
+        let key = &ph_caps[1];
+        if let Some(m) = caps.name(key) {
+            let val_str = m.as_str();
+            if val_str.starts_with('-') {
+                panic!("Negative value for {}", key);
             }
-            if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
-                if let Some(new_file_name) =
-                    transform_filename(file_name, &cli.new_pattern, &re, &cli.default_season, show_title)
-                {
-                    let warn = check_warning(file_name, &re);
-                    let new_path = path.with_file_name(&new_file_name);
-                    planned.push(PlannedRename {
-                        old_path: path.to_path_buf(),
-                        new_path: new_path.clone(),
-                        warn,
-                    });
-                    info!("Planned rename from {:?} to {:?}", path, &new_path);
-                }
+            if let Some(width_match) = ph_caps.get(2) {
+                let width: usize = width_match.as_str().parse().unwrap();
+                let num: i32 = val_str.parse().unwrap();
+                format!("{:0width$}", num, width = width)
+            } else {
+                val_str.to_string()
             }
-        }
-    }
-
-    // If any file would be renamed with season or episode "0", warn the user.
-    if planned.iter().any(|p| p.warn) {
-        warn!("Some files have season or episode as 0. This might be unintended.");
-        eprint!("Do you want to proceed? (y/N): ");
-        io::stdout().flush()?;
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        let input = input.trim().to_lowercase();
-        if input != "y" && input != "yes" {
-            warn!("Aborting as per user request.");
-            return Ok(());
-        }
-    }
-
-    // Process the planned renames.
-    for plan in planned {
-        info!("Renaming from {:?} to {:?}", plan.old_path, plan.new_path);
-        if cli.dry_run {
-            info!("Dry-run mode: no changes made.");
+        } else if key == "season" {
+            // Use the default season if not captured.
+            if default_season.starts_with('-') {
+                panic!("Negative default season value");
+            }
+            if let Some(width_match) = ph_caps.get(2) {
+                let width: usize = width_match.as_str().parse().unwrap();
+                let num: i32 = default_season.parse().unwrap();
+                format!("{:0width$}", num, width = width)
+            } else {
+                default_season.to_string()
+            }
+        } else if key == "title" {
+            // Replace {title} with the provided show title, or empty if not provided.
+            show_title.to_string()
         } else {
-            if let Err(e) = std::fs::rename(&plan.old_path, &plan.new_path) {
-                error!("Error renaming file: {:?}", e);
-            }
+            // Leave unchanged if no capture and not "season" or "title".
+            ph_caps.get(0).unwrap().as_str().to_string()
         }
-    }
+    });
+    let mut new_file_name = result.to_string();
 
-    Ok(())
+    // Enforce the original file's extension.
+    let candidate = Path::new(&new_file_name);
+    if let Some(candidate_ext) = candidate.extension().and_then(|s| s.to_str()) {
+        if candidate_ext.to_lowercase() != original_ext {
+            let stem = candidate.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+            new_file_name = format!("{}.{}", stem, original_ext);
+        }
+    } else if !original_ext.is_empty() {
+        new_file_name = format!("{}.{}", new_file_name, original_ext);
+    }
+    Some(new_file_name)
+}
+
+/// Checks whether the file’s captured season or episode equals "0".
+pub fn check_warning(original: &str, re: &Regex) -> bool {
+    if let Some(caps) = re.captures(original) {
+        let season_warn = caps
+            .name("season")
+            .map(|m| m.as_str() == "0")
+            .unwrap_or(false);
+        let episode_warn = caps
+            .name("episode")
+            .map(|m| m.as_str() == "0")
+            .unwrap_or(false);
+        season_warn || episode_warn
+    } else {
+        false
+    }
+}
+
+/// Determines if a file should be processed based on its extension.
+/// If allowed_types is non-empty, the file must have an extension (case‑insensitively)
+/// that matches one of the provided types.
+pub fn should_process_file(path: &Path, allowed_types: &[String]) -> bool {
+    if !allowed_types.is_empty() {
+        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+            allowed_types.iter().any(|ft| ft.eq_ignore_ascii_case(ext))
+        } else {
+            false
+        }
+    } else {
+        true
+    }
 }
 
 #[cfg(test)]
