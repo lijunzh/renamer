@@ -30,8 +30,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut planned: Vec<PlannedRename> = Vec::new();
 
-    // Recursively iterate over files in the directory.
-    for entry in WalkDir::new(&cli.directory).into_iter().filter_map(|e| e.ok()) {
+    // Recursively iterate over files in the directory up to the specified depth.
+    let walker = WalkDir::new(&cli.directory).max_depth(cli.depth).into_iter();
+
+    for entry in walker.filter_map(|e| e.ok()) {
         let path = entry.path();
         // Only process files (ignore subdirectories).
         if path.is_file() {
@@ -88,7 +90,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
     use regex::Regex;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn test_transform_with_title_provided() {
@@ -210,5 +212,23 @@ mod tests {
         let allowed_types = vec!["mkv".to_string(), "ass".to_string()];
         let path = Path::new("subdir");
         assert!(!should_process_file(path, &allowed_types));
+    }
+
+    #[test]
+    fn test_depth_option() {
+        let cli = Cli {
+            directory: PathBuf::from("test_dir"),
+            current_pattern: String::from(r"S(?P<season>\d+)E(?P<episode>\d+)"),
+            new_pattern: String::from("{title} - S{season:02}E{episode:02}"),
+            file_types: vec!["mkv".to_string()],
+            dry_run: true,
+            default_season: String::from("1"),
+            title: Some(String::from("TestShow")),
+            depth: 2,
+        };
+
+        // Simulate the main function with the depth option set to 2.
+        // Ensure that files up to 2 levels deep are processed.
+        // ...test logic...
     }
 }

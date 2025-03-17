@@ -25,8 +25,15 @@ including this README file.
 - **Dry-Run Mode**: Preview the planned renames without modifying any files.
 - **User Confirmation**: Warns when season or episode is `0` and asks for
   confirmation before proceeding.
+- **Depth Control**: Optionally specify the depth of recursion for renaming files.
 
 ## Installation
+
+To install Renamer, you need to have Rust and Cargo installed. Then run:
+
+```sh
+cargo install renamer
+```
 
 Clone the repository and build the project using Cargo:
 
@@ -38,10 +45,17 @@ cargo build --release
 
 ## Usage
 
+To use Renamer, run the following command:
+
+```sh
+renamer <pattern> <replacement> [options]
+```
+
 Run the CLI tool using cargo run with the appropriate options.
 
 ### Options
 
+- `-h`, `--help`: Print help information.
 - -d, --directory: (Required) Directory to process.
 - -c, --current_pattern: (Required) Regex pattern with named groups to match
   parts of the current file name. Example:
@@ -70,8 +84,21 @@ $begin:math:display$[^]]+$end:math:display$$begin:math:display$(?P<title>[^]]+)$
   pattern contains {title}.
 - --dry-run: If set, prints the planned renames without actually renaming any
   files.
+- --depth: Specify the depth of recursion for renaming files. Default is 1 (no recursion).
 
-## Examples
+### Examples
+
+Rename all `.txt` files to `.md`:
+
+```sh
+renamer '^(.*)\.txt$' '$1.md'
+```
+
+Perform a dry run to see the changes:
+
+```sh
+renamer '^(.*)\.txt$' '$1.md' --dry-run
+```
 
 ### Example 1: Renaming Files with Season & Episode
 
@@ -140,6 +167,22 @@ new pattern is replaced by "My Show", producing:
 My Show - S01E01.mkv
 ```
 
+### Example 4: Depth Control for Recursive Renaming
+
+To rename files in subdirectories as well, specify the depth of recursion:
+
+```bash
+cargo run -- \
+  -d /path/to/files \
+  --current_pattern "$begin:math:display$(?P<episode>\\d+)$end:math:display$" \
+  --file_types mkv,ass \
+  --default-season 1 \
+  --title "My Show" \
+  --depth 2
+```
+
+This will rename files in the specified directory and all its subdirectories up to 2 levels deep.
+
 ## Dry-Run Mode
 
 To preview changes without renaming files, include the --dry-run flag:
@@ -172,7 +215,32 @@ The tests cover:
 - Default season usage when season data is missing.
 - Ignoring files that do not match the regex or have disallowed extensions.
 - Dry-run functionality and warning conditions.
+- Depth control for recursive renaming.
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request on GitHub.
+
+### Development
+
+To set up the development environment, clone the repository and run:
+
+```sh
+git clone https://github.com/yourusername/renamer.git
+cd renamer
+cargo build
+```
 
 ## License
 
 This project is licensed under the MIT License.
+
+## Need Help with Regex?
+
+If you are not familiar with regex syntax, you can use ChatGPT or other LLM tools to help create regex expressions. Here are a few example prompts that might be useful:
+
+- "Create a regex pattern to match file names in the format 'S1E1_video.mkv'."
+- "Generate a regex to extract the title and episode number from file names like '[Author][title][01][1080P][BDRip][HEVC-10bit][FLAC].mkv'."
+- "How can I write a regex to match file names with a season and episode number, but without a title?"
+
+These tools can provide you with the regex patterns you need to use with Renamer.

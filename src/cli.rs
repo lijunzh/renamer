@@ -36,4 +36,8 @@ pub struct Cli {
     /// Show title to include in the new file name (optional).
     #[arg(short = 'T', long)]
     pub title: Option<String>,
+
+    /// Depth of recursion for renaming files (default: 1)
+    #[arg(long, default_value_t = 1)]
+    pub depth: usize,
 }
