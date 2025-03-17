@@ -2,6 +2,20 @@ use regex::Regex;
 use crate::error::RenamerError;
 
 // Transformation logic for renaming filenames.
+
+/// Transforms a filename using a regex and replacement pattern.
+///
+/// # Examples
+///
+/// ```
+/// # use regex::Regex;
+/// # use renamer::transform_filename;
+/// # use renamer::RenamerError;
+/// let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
+/// let result = transform_filename("S1E1_video.mkv", "{title} - S{season:02}E{episode:02}", &re, "1", "Show")
+///     .expect("failed to transform");
+/// assert_eq!(result, "Show - S01E01.mkv");
+/// ```
 pub fn transform_filename(original: &str, new_pattern: &str, _re: &Regex, season: &str, title: &str) -> Result<String, RenamerError> {
     // Extract capture groups from original filename.
     let caps = _re.captures(original).ok_or(RenamerError::InvalidPattern)?;
@@ -21,6 +35,15 @@ pub fn transform_filename(original: &str, new_pattern: &str, _re: &Regex, season
     Ok(result)
 }
 
+/// Checks if a filename contains the "warning" substring.
+///
+/// # Examples
+///
+/// ```
+/// # use renamer::check_warning;
+/// assert!(check_warning("file_with_warning.txt"));
+/// assert!(!check_warning("file_without.txt"));
+/// ```
 pub fn check_warning(filename: &str) -> bool {
     // ...existing warning check logic...
     filename.contains("warning")

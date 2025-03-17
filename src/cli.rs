@@ -1,5 +1,25 @@
 //! CLI module for the renamer tool.
 //! This module handles the parsing of command-line arguments using the `clap` crate.
+//!
+//! # Examples
+//!
+//! ```
+//! # use renamer::cli::Cli;
+//! # use clap::Parser;
+//! let args = vec![
+//!     "renamer",
+//!     "-d", "/tmp",
+//!     "-c", r"S(?P<season>\d+)E(?P<episode>\d+)",
+//!     "-n", "{title} - S{season:02}E{episode:02}",
+//!     "-t", "mkv,ass",
+//!     "--dry-run",
+//!     "--default-season", "1",
+//!     "-T", "Show",
+//!     "--depth", "2",
+//! ];
+//! let cli = Cli::parse_from(args);
+//! assert_eq!(cli.directory, std::path::PathBuf::from("/tmp"));
+//! ```
 
 use clap::Parser;
 use std::path::PathBuf;

@@ -1,4 +1,4 @@
-use renamer::{Cli, transform_filename, check_warning, should_process_file};
+use renamer::{Cli, transform_filename, should_process_file};
 use regex::Regex;
 use tempfile::tempdir;
 

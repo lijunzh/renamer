@@ -1,3 +1,12 @@
+//! Error module for the renamer tool.
+//!
+//! # Examples
+//!
+//! ```
+//! # use renamer::RenamerError;
+//! let err = RenamerError::InvalidPattern;
+//! assert_eq!(format!("{}", err), "Invalid pattern provided");
+//! ```
 use std::fmt;
 
 #[derive(Debug)]
