@@ -1,0 +1,11 @@
+[release]
+# Prevent signing if not needed (optional)
+sign = false
+# Push changes and tags automatically after release
+push = true
+# Tag format using the version from Cargo.toml
+tag_name = "v{{version}}"
+publish = false
+# Execute git-cliff prior to the release commit to update changelog.md automatically.
+# Adjust --config if your cliff.toml is not in the project root.
+pre_release_hook = "git cliff --config cliff.toml --latest > changelog.md"
