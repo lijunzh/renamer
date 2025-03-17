@@ -1,6 +1,8 @@
-use renamer::{Cli, transform_filename, should_process_file};
+use renamer::{Cli, transform_filename, should_process_file, merge_config};
 use regex::Regex;
-use tempfile::tempdir;
+use tempfile::{tempdir, NamedTempFile};
+use std::io::Write;
+use std::path::PathBuf;
 
 #[test]
 fn test_transform_with_title_provided() {
@@ -29,8 +31,6 @@ fn test_transform_without_title_placeholder() {
     assert_eq!(transformed, "S01E01.mkv");
 }
 
-// ... include additional tests from the previous module, for example:
-
 #[test]
 fn test_depth_option() {
     // Create a temporary directory structure:
@@ -42,12 +42,10 @@ fn test_depth_option() {
     let base_path = base.path();
     let file1 = base_path.join("file1.txt");
     std::fs::write(&file1, "dummy content").unwrap();
-
     let sub1 = base_path.join("sub1");
     std::fs::create_dir(&sub1).unwrap();
     let file2 = sub1.join("file2.txt");
     std::fs::write(&file2, "dummy content").unwrap();
-
     let sub2 = sub1.join("sub2");
     std::fs::create_dir(&sub2).unwrap();
     let file3 = sub2.join("file3.txt");
@@ -55,8 +53,9 @@ fn test_depth_option() {
 
     // Create a dummy CLI configuration with depth=2.
     let cli = Cli {
+        config: None,
         directory: base_path.to_path_buf(),
-        current_pattern: r"(.+)".to_string(),
+        current_pattern: "(.+)".to_string(),
         new_pattern: "$1".to_string(),
         file_types: vec!["txt".to_string()],
         dry_run: true,
@@ -78,3 +77,43 @@ fn test_depth_option() {
     assert_eq!(count, 2);
 }
 
+#[test]
+fn test_config_file_merging() {
+    // Prepare a temporary config file with custom parameters.
+    let mut config_file = NamedTempFile::new().unwrap();
+    writeln!(config_file, r#"directory = "/configured/dir""#).unwrap();
+    writeln!(config_file, r#"current_pattern = "C(?P<season>\\d+)D(?P<episode>\\d+)""#).unwrap();
+    // Double curly braces produce literal { and }
+    writeln!(config_file, r#"new_pattern = "Configured - C{{season:02}}D{{episode:02}}""#).unwrap();
+    writeln!(config_file, r#"file_types = ["mp4", "avi"]"#).unwrap();
+    writeln!(config_file, r#"dry_run = false"#).unwrap();
+    writeln!(config_file, r#"default_season = "2""#).unwrap();
+    writeln!(config_file, r#"title = "ConfiguredShow""#).unwrap();
+    writeln!(config_file, r#"depth = 3"#).unwrap();
+
+    // Create a CLI instance with empty values and set the config field.
+    let mut cli = Cli {
+        config: Some(PathBuf::from(config_file.path())),
+        directory: "".into(),
+        current_pattern: "".into(),
+        new_pattern: "".into(),
+        file_types: vec![],
+        dry_run: true, // This should be overridden.
+        default_season: "".into(),
+        title: None,
+        depth: 1,
+    };
+
+    // Merge configuration from the temporary file.
+    merge_config(&mut cli).expect("Failed to merge config");
+
+    // Assert that CLI fields have been updated according to the config file.
+    assert_eq!(cli.directory, PathBuf::from("/configured/dir"));
+    assert_eq!(cli.current_pattern, "C(?P<season>\\d+)D(?P<episode>\\d+)");
+    assert_eq!(cli.new_pattern, "Configured - C{season:02}D{episode:02}");
+    assert_eq!(cli.file_types, vec!["mp4".to_string(), "avi".to_string()]);
+    assert_eq!(cli.dry_run, false);
+    assert_eq!(cli.default_season, "2".to_string());
+    assert_eq!(cli.title, Some("ConfiguredShow".to_string()));
+    assert_eq!(cli.depth, 3);
+}

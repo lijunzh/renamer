@@ -3,6 +3,7 @@
 
 mod cli;
 mod renamer;
+mod config; // newly added
 
 use log::{info, warn, error, LevelFilter};
 use simplelog::{Config, SimpleLogger};
@@ -13,13 +14,14 @@ use anyhow::{anyhow, Result};
 use rayon::prelude::*;
 
 use crate::cli::Cli;
+use crate::config::merge_config;
 use crate::renamer::{PlannedRename, transform_filename, check_warning, should_process_file};
 
-/// Main function to run the renamer tool.
-/// Sets up logging, parses CLI arguments, and processes files for renaming.
 fn main() -> Result<()> {
     SimpleLogger::init(LevelFilter::Info, Config::default())?;
-    let cli = Cli::parse();
+    let mut cli = Cli::parse();
+
+    merge_config(&mut cli)?; // Use merge_config from config module
 
     info!("Starting renamer tool with parameters: {:?}", cli);
 

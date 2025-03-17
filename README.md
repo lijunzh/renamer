@@ -183,6 +183,42 @@ cargo run -- \
 
 This will rename files in the specified directory and all its subdirectories up to 2 levels deep.
 
+## Configuration File and Merging Priority
+
+Renamer supports providing a configuration file in TOML format to set common parameters. When you supply a config file using the `--config` option, its values are merged with those provided via the CLI. **CLI options take precedence over configuration file values.** That is, if you provide an option both on the command line and in the configuration file, the CLI value will be used.
+
+For example, if you run:
+
+```sh
+renamer --config config.toml --title "My Title"
+```
+
+the title `"My Title"` will override the title specified in `config.toml`.
+
+## Configuration File Example
+
+You can provide a configuration file in TOML format to set common parameters. For example, create a file named `config.toml` with the following content:
+
+````toml
+// filepath: /Users/l0z05rg/repo/renamer/config.toml
+directory = "/path/to/files"
+current_pattern = "S(?P<season>\\d+)E(?P<episode>\\d+)"
+new_pattern = "{title} - S{season:02}E{episode:02}"
+file_types = ["mkv", "ass"]
+dry_run = true
+default_season = "1"
+title = "My Show"
+depth = 2
+````
+
+Then run Renamer by specifying the config file:
+
+```sh
+renamer --config config.toml
+```
+
+Values provided in the configuration file will be merged with any CLI arguments you supply.
+
 ## Dry-Run Mode
 
 To preview changes without renaming files, include the --dry-run flag:

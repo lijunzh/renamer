@@ -113,6 +113,18 @@ pub fn transform_filename(
 /// # Returns
 /// 
 /// Returns `true` if the season or episode is "0", otherwise `false`.
+///
+/// # Examples
+///
+/// ```rust
+/// # use regex::Regex;
+/// # use renamer::check_warning;
+/// let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
+/// // For a filename with season "0" the warning is triggered.
+/// assert!(check_warning("S0E10_video.txt", &re));
+/// // For a valid season, no warning is triggered.
+/// assert!(!check_warning("S1E10_video.txt", &re));
+/// ```
 pub fn check_warning(original: &str, re: &Regex) -> bool {
     if let Some(caps) = re.captures(original) {
         let season_warn = caps

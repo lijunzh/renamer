@@ -53,25 +53,42 @@ pub fn transform_filename(original: &str, new_pattern: &str, _re: &Regex, season
 ///
 /// In the current implementation, a filename that contains "warning"
 /// will trigger a warning.
-///
+/// 
 /// # Parameters
-///
+/// 
 /// - `filename`: The filename to check.
-///
+/// - `re`: The regex to capture season and episode information from the file name.
+/// 
 /// # Returns
-///
+/// 
 /// Returns `true` if the filename contains "warning", otherwise `false`.
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust
+/// # use regex::Regex;
 /// # use renamer::check_warning;
-/// assert!(check_warning("file_with_warning.txt"));
-/// assert!(!check_warning("file_without.txt"));
+/// let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
+/// // Use a filename that matches the regex and has season "0" to trigger warning.
+/// assert!(check_warning("S0E10_video.txt", &re));
+/// // A filename with a non-zero season does not trigger warning.
+/// assert!(!check_warning("S1E10_video.txt", &re));
 /// ```
-pub fn check_warning(filename: &str) -> bool {
-    // ...existing warning check logic...
-    filename.contains("warning")
+pub fn check_warning(filename: &str, re: &Regex) -> bool {
+    // ...existing code...
+    if let Some(caps) = re.captures(filename) {
+        let season_warn = caps
+            .name("season")
+            .map(|m| m.as_str() == "0")
+            .unwrap_or(false);
+        let episode_warn = caps
+            .name("episode")
+            .map(|m| m.as_str() == "0")
+            .unwrap_or(false);
+        season_warn || episode_warn
+    } else {
+        false
+    }
 }
 
 #[cfg(test)]
@@ -106,11 +123,13 @@ mod tests {
 
     #[test]
     fn test_check_warning_true() {
-        assert!(check_warning("file_warning.txt"));
+        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
+        assert!(check_warning("S0E10_video.txt", &re));
     }
 
     #[test]
     fn test_check_warning_false() {
-        assert!(!check_warning("file_ok.txt"));
+        let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
+        assert!(!check_warning("S1E10_video.txt", &re));
     }
 }

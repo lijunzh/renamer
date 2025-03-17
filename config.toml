@@ -1,0 +1,8 @@
+directory = "/path/to/files"
+current_pattern = "S(?P<season>\\d+)E(?P<episode>\\d+)"
+new_pattern = "{title} - S{season:02}E{episode:02}"
+file_types = ["mkv", "ass"]
+dry_run = true
+default_season = "1"
+title = "My Show"
+depth = 2

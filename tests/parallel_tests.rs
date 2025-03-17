@@ -48,8 +48,9 @@ fn test_parallel_processing_transform() {
     let default_season = "1";
     let title = "TestShow";
 
+    // Remove the .ok() call as transform_filename returns Option.
     let results: Vec<_> = file_names.par_iter()
-        .filter_map(|&name| transform_filename(name, new_pattern, &re, default_season, title).ok())
+        .filter_map(|&name| transform_filename(name, new_pattern, &re, default_season, title))
         .collect();
 
     let expected = vec![
