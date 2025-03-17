@@ -9,13 +9,14 @@ use simplelog::{Config, SimpleLogger};
 use walkdir::WalkDir;
 use std::io::{self, Write};
 use clap::Parser;
+use anyhow::{anyhow, Result};
 
 use crate::cli::Cli;
 use crate::renamer::{PlannedRename, transform_filename, check_warning, should_process_file};
 
 /// Main function to run the renamer tool.
 /// Sets up logging, parses CLI arguments, and processes files for renaming.
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     SimpleLogger::init(LevelFilter::Info, Config::default())?;
     let cli = Cli::parse();
 
@@ -23,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Compile the provided regex pattern.
     let re = regex::Regex::new(&cli.current_pattern)
-        .map_err(|e| format!("Invalid regex pattern provided for current file names: {}", e))?;
+        .map_err(|e| anyhow!("Invalid regex pattern provided for current file names: {}", e))?;
 
     // Determine the show title to use. If none is provided, use an empty string.
     let show_title = cli.title.as_deref().unwrap_or("");
