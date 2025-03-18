@@ -4,12 +4,22 @@ use tempfile::{tempdir, NamedTempFile};
 use std::io::Write;
 use std::path::PathBuf;
 
+// Add a music file example test
+#[test]
+fn test_transform_music_file() {
+    let re = Regex::new(r"(?P<artist>[^-]+)-(?P<album>[^-]+)-(?P<track>\d+)").unwrap();
+    let original = "Beatles-AbbeyRoad-01.mp3";
+    let new_pattern = "{artist} - {album} - Track {track:02}";
+    let transformed = transform_filename(original, new_pattern, &re).unwrap();
+    assert_eq!(transformed, "Beatles - AbbeyRoad - Track 01.mp3");
+}
+
 #[test]
 fn test_transform_with_title_provided() {
     let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
     let original = "S1E1_video.mkv";
-    let new_pattern = "{title} - S{season:02}E{episode:02}";
-    let transformed = transform_filename(original, new_pattern, &re, "1", "MyShow").unwrap();
+    let new_pattern = "MyShow - S{season:02}E{episode:02}";
+    let transformed = transform_filename(original, new_pattern, &re).unwrap();
     assert_eq!(transformed, "MyShow - S01E01.mkv");
 }
 
@@ -17,8 +27,8 @@ fn test_transform_with_title_provided() {
 fn test_transform_with_title_omitted() {
     let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
     let original = "S1E1_video.mkv";
-    let new_pattern = "{title} - S{season:02}E{episode:02}";
-    let transformed = transform_filename(original, new_pattern, &re, "1", "").unwrap();
+    let new_pattern = " - S{season:02}E{episode:02}";
+    let transformed = transform_filename(original, new_pattern, &re).unwrap();
     assert_eq!(transformed, " - S01E01.mkv");
 }
 
@@ -27,7 +37,7 @@ fn test_transform_without_title_placeholder() {
     let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
     let original = "S1E1_video.mkv";
     let new_pattern = "S{season:02}E{episode:02}";
-    let transformed = transform_filename(original, new_pattern, &re, "1", "MyShow").unwrap();
+    let transformed = transform_filename(original, new_pattern, &re).unwrap();
     assert_eq!(transformed, "S01E01.mkv");
 }
 
@@ -59,8 +69,6 @@ fn test_depth_option() {
         new_pattern: "$1".to_string(),
         file_types: vec!["txt".to_string()],
         dry_run: true,
-        default_season: "1".to_string(),
-        title: None,
         depth: 2,
     };
 
@@ -83,12 +91,10 @@ fn test_config_file_merging() {
     let mut config_file = NamedTempFile::new().unwrap();
     writeln!(config_file, r#"directory = "/configured/dir""#).unwrap();
     writeln!(config_file, r#"current_pattern = "C(?P<season>\\d+)D(?P<episode>\\d+)""#).unwrap();
-    // Double curly braces produce literal { and }
     writeln!(config_file, r#"new_pattern = "Configured - C{{season:02}}D{{episode:02}}""#).unwrap();
     writeln!(config_file, r#"file_types = ["mp4", "avi"]"#).unwrap();
     writeln!(config_file, r#"dry_run = false"#).unwrap();
-    writeln!(config_file, r#"default_season = "2""#).unwrap();
-    writeln!(config_file, r#"title = "ConfiguredShow""#).unwrap();
+    // Removed default_season and title
     writeln!(config_file, r#"depth = 3"#).unwrap();
 
     // Create a CLI instance with empty values and set the config field.
@@ -98,9 +104,7 @@ fn test_config_file_merging() {
         current_pattern: "".into(),
         new_pattern: "".into(),
         file_types: vec![],
-        dry_run: true, // This should be overridden.
-        default_season: "".into(),
-        title: None,
+        dry_run: true, // This should be overridden by config.
         depth: 1,
     };
 
@@ -113,7 +117,5 @@ fn test_config_file_merging() {
     assert_eq!(cli.new_pattern, "Configured - C{season:02}D{episode:02}");
     assert_eq!(cli.file_types, vec!["mp4".to_string(), "avi".to_string()]);
     assert_eq!(cli.dry_run, false);
-    assert_eq!(cli.default_season, "2".to_string());
-    assert_eq!(cli.title, Some("ConfiguredShow".to_string()));
     assert_eq!(cli.depth, 3);
 }

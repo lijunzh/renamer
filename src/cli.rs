@@ -13,8 +13,6 @@
 //!     "-n", "{title} - S{season:02}E{episode:02}",
 //!     "-t", "mkv,ass",
 //!     "--dry-run",
-//!     "--default-season", "1",
-//!     "-T", "Show",
 //!     "--depth", "2",
 //! ];
 //! let cli = Cli::parse_from(args);
@@ -60,14 +58,6 @@ pub struct Cli {
     #[arg(long)]
     pub dry_run: bool,
 
-    /// Default season to use if not captured in the file name (default: "1")
-    #[arg(long, default_value = "1")]
-    pub default_season: String,
-
-    /// Show title to include in the new file name (optional).
-    #[arg(short = 'T', long)]
-    pub title: Option<String>,
-
     /// Depth of recursion for renaming files (default: 1)
     #[arg(long, default_value_t = 1)]
     pub depth: usize,
@@ -87,8 +77,6 @@ mod tests {
             "-n", "{title} - S{season:02}E{episode:02}",
             "-t", "mkv,ass",
             "--dry-run",
-            "--default-season", "1",
-            "-T", "MyShow",
             "--depth", "3",
         ];
         let cli = Cli::parse_from(args);
@@ -97,8 +85,6 @@ mod tests {
         assert_eq!(cli.new_pattern, "{title} - S{season:02}E{episode:02}");
         assert_eq!(cli.file_types, vec!["mkv".to_string(), "ass".to_string()]);
         assert!(cli.dry_run);
-        assert_eq!(cli.default_season, "1".to_string());
-        assert_eq!(cli.title, Some("MyShow".to_string()));
         assert_eq!(cli.depth, 3);
     }
 
@@ -110,8 +96,6 @@ mod tests {
             "-n", "{title} - S{season:02}E{episode:02}",
             "-t", "mkv,ass",
             "--dry-run",
-            "--default-season", "1",
-            "-T", "MyShow",
             "--depth", "3",
         ];
         let cli = Cli::parse_from(args);

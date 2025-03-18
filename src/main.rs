@@ -1,9 +1,10 @@
 //! Main module for the renamer tool.
 //! This module handles the CLI parsing, logging setup, and the main logic for processing files.
 
+mod error; 
 mod cli;
 mod renamer;
-mod config; // newly added
+mod config; 
 
 use log::{info, warn, error, LevelFilter};
 use simplelog::{Config, SimpleLogger};
@@ -29,8 +30,7 @@ fn main() -> Result<()> {
     let re = regex::Regex::new(&cli.current_pattern)
         .map_err(|e| anyhow!("Invalid regex pattern provided for current file names: {}", e))?;
 
-    // Determine the show title to use. If none is provided, use an empty string.
-    let show_title = cli.title.as_deref().unwrap_or("");
+    // Remove title-related variable that's no longer used
 
     // Replace the sequential iteration with parallel processing.
     let planned: Vec<PlannedRename> = WalkDir::new(&cli.directory)
@@ -42,7 +42,7 @@ fn main() -> Result<()> {
             let path = entry.path();
             if path.is_file() && should_process_file(path, &cli.file_types) {
                 if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
-                    if let Some(new_file_name) = transform_filename(file_name, &cli.new_pattern, &re, &cli.default_season, show_title) {
+                    if let Ok(new_file_name) = transform_filename(file_name, &cli.new_pattern, &re) {
                         let warn = check_warning(file_name, &re);
                         let new_path = path.with_file_name(&new_file_name);
                         return Some(PlannedRename {

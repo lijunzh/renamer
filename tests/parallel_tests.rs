@@ -19,7 +19,7 @@ fn test_parallel_processing_collect_files() {
 
     let file_types = vec!["mkv".to_string()];
     
-    // Use WalkDir with rayon to process files in parallel.
+    // Process files in parallel using WalkDir.
     let entries: Vec<_> = WalkDir::new(dir_path)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -37,20 +37,18 @@ fn test_parallel_processing_collect_files() {
 
 #[test]
 fn test_parallel_processing_transform() {
-    // Test parallel transformation on a list of file names.
+    // Test parallel transformation on a list of file names using solely regex capture groups.
     let file_names = vec![
         "S1E1_test.mkv",
         "S2E12_test.mkv",
         "S3E3_test.mkv",
     ];
     let re = Regex::new(r"S(?P<season>\d+)E(?P<episode>\d+)").unwrap();
-    let new_pattern = "{title} - S{season:02}E{episode:02}";
-    let default_season = "1";
-    let title = "TestShow";
+    let new_pattern = "TestShow - S{season:02}E{episode:02}";
 
-    // Remove the .ok() call as transform_filename returns Option.
+    // Convert results from Result to Option using .ok() in filter_map.
     let results: Vec<_> = file_names.par_iter()
-        .filter_map(|&name| transform_filename(name, new_pattern, &re, default_season, title))
+        .filter_map(|&name| transform_filename(name, new_pattern, &re).ok())
         .collect();
 
     let expected = vec![

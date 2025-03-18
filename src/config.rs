@@ -10,8 +10,7 @@ pub struct AppConfig {
     pub new_pattern: Option<String>,
     pub file_types: Option<Vec<String>>,
     pub dry_run: Option<bool>,
-    pub default_season: Option<String>,
-    pub title: Option<String>,
+    // Removed default_season and title fields
     pub depth: Option<usize>,
 }
 
@@ -55,14 +54,7 @@ pub fn merge_config(cli: &mut Cli) -> Result<(), anyhow::Error> {
                 cli.dry_run = val;
             }
         }
-        if cli.default_season.is_empty() {
-            if let Some(val) = config.default_season {
-                cli.default_season = val;
-            }
-        }
-        if cli.title.is_none() {
-            cli.title = config.title;
-        }
+        // Removed code blocks for default_season and title
         if cli.depth == 1 {
             if let Some(val) = config.depth {
                 cli.depth = val;
